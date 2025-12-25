@@ -755,9 +755,20 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+# CORS - Allow frontend origins
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://localhost:5174",
+    "http://localhost:5175",
+    FRONTEND_URL,
+]
+# Also allow any vercel.app and railway.app domains
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=r"https://.*\.(vercel\.app|railway\.app)$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
