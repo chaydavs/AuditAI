@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Environment (IMPORTANT - never commit secrets!)
+.env
+.env.local
+.env.production
+*.local
+
+# Database
+*.db
+*.sqlite
+
+# Build
+dist/
+build/
+*.egg-info/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Cache
+.cache/
+.vite/
+
+# Keep data folder structure but not contents
+!backend/data/.gitkeep

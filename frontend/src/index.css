@@ -1,0 +1,387 @@
+@import "tailwindcss";
+
+/* =====================================================
+   MODERN EDITORIAL DESIGN SYSTEM
+   High-end academic tool aesthetic
+   ===================================================== */
+
+/* Typography */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  /* Color Palette */
+  --paper-warm: #FDFCF8;
+  --ink-black: #0f172a;
+  --ink-gray: #475569;
+  --border-strong: #0f172a;
+  --border-light: #cbd5e1;
+
+  /* Typography */
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* Base Styles */
+body {
+  margin: 0;
+  background: var(--paper-warm);
+  color: var(--ink-black);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Serif for headings */
+h1, h2, h3, h4, h5, h6,
+.font-serif {
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+/* Editorial Card Component */
+.editorial-card {
+  background: white;
+  border: 1px solid var(--ink-black);
+  box-shadow: 4px 4px 0px 0px rgba(0, 0, 0, 1);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.editorial-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0px 0px rgba(0, 0, 0, 1);
+}
+
+/* Editorial Input - Paper Form Style */
+.editorial-input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border-light);
+  border-radius: 0;
+  padding: 0.5rem 0;
+  transition: border-color 0.2s ease;
+  outline: none;
+}
+
+.editorial-input:focus {
+  border-bottom-color: var(--ink-black);
+  box-shadow: none;
+}
+
+.editorial-input::placeholder {
+  color: #94a3b8;
+  font-weight: 300;
+}
+
+/* Editorial Select */
+.editorial-select {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border-light);
+  border-radius: 0;
+  padding: 0.5rem 0;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 0 center;
+  background-repeat: no-repeat;
+  background-size: 1.5em 1.5em;
+  padding-right: 2rem;
+}
+
+.editorial-select:focus {
+  border-bottom-color: var(--ink-black);
+  outline: none;
+  box-shadow: none;
+}
+
+/* Primary Button - Solid Black with Serif */
+.btn-primary {
+  background: var(--ink-black);
+  color: white;
+  font-family: 'Playfair Display', Georgia, serif;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+  font-weight: 500;
+}
+
+.btn-primary:hover {
+  background: #1e293b;
+}
+
+.btn-primary:active {
+  transform: translateY(1px);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Secondary Button - Outlined */
+.btn-secondary {
+  background: transparent;
+  color: var(--ink-black);
+  border: 1px solid var(--ink-black);
+  font-family: 'Playfair Display', Georgia, serif;
+  padding: 0.75rem 1.5rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  font-weight: 500;
+}
+
+.btn-secondary:hover {
+  background: #f8fafc;
+}
+
+/* Tertiary/Ghost Button */
+.btn-ghost {
+  background: transparent;
+  color: var(--ink-gray);
+  border: none;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-thickness: 1px;
+}
+
+.btn-ghost:hover {
+  color: var(--ink-black);
+}
+
+/* Divider */
+.editorial-divider {
+  height: 1px;
+  background: var(--ink-black);
+  width: 6rem;
+  margin: 1.5rem auto;
+}
+
+/* Labels */
+.editorial-label {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-gray);
+  margin-bottom: 0.5rem;
+}
+
+/* Tags/Badges */
+.editorial-tag {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--border-light);
+  background: white;
+}
+
+.editorial-tag-filled {
+  background: var(--ink-black);
+  color: white;
+  border-color: var(--ink-black);
+}
+
+/* Dropdown Menu */
+.editorial-dropdown {
+  background: white;
+  border: 1px solid var(--ink-black);
+  box-shadow: 4px 4px 0px 0px rgba(0, 0, 0, 1);
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.editorial-dropdown-item {
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.editorial-dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.editorial-dropdown-item:hover {
+  background: #f8fafc;
+}
+
+.editorial-dropdown-item.active {
+  background: var(--ink-black);
+  color: white;
+}
+
+/* Navigation */
+.editorial-nav {
+  background: white;
+  border-bottom: 1px solid var(--ink-black);
+}
+
+.editorial-nav-link {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--ink-gray);
+  transition: color 0.2s ease;
+  text-decoration: none;
+}
+
+.editorial-nav-link:hover {
+  color: var(--ink-black);
+}
+
+.editorial-nav-link.active {
+  color: var(--ink-black);
+  font-weight: 600;
+  border-bottom: 2px solid var(--ink-black);
+}
+
+/* Progress Bars */
+.editorial-progress {
+  height: 4px;
+  background: var(--border-light);
+  overflow: hidden;
+}
+
+.editorial-progress-bar {
+  height: 100%;
+  background: var(--ink-black);
+  transition: width 0.3s ease;
+}
+
+/* Course Cards */
+.course-card {
+  background: white;
+  border: 1px solid var(--border-light);
+  padding: 0.75rem;
+  cursor: grab;
+  transition: all 0.15s ease;
+}
+
+.course-card:hover {
+  border-color: var(--ink-black);
+  box-shadow: 2px 2px 0px 0px rgba(0, 0, 0, 1);
+}
+
+.course-card.completed {
+  background: #f0fdf4;
+  border-color: #16a34a;
+}
+
+.course-card.planned {
+  background: #eff6ff;
+  border-color: #2563eb;
+}
+
+.course-card.dragging {
+  opacity: 0.5;
+  transform: rotate(2deg);
+}
+
+/* Semester Column */
+.semester-column {
+  background: white;
+  border: 1px solid var(--ink-black);
+  min-height: 200px;
+}
+
+.semester-column.drop-target {
+  border-style: dashed;
+  border-width: 2px;
+  background: #fafaf9;
+}
+
+/* Modal Overlay */
+.modal-overlay {
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(2px);
+}
+
+.modal-content {
+  background: white;
+  border: 1px solid var(--ink-black);
+  box-shadow: 8px 8px 0px 0px rgba(0, 0, 0, 1);
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--paper-warm);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-light);
+  border-radius: 0;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-gray);
+}
+
+/* Drag and drop styles */
+.dragging-course * {
+  cursor: grabbing !important;
+}
+
+[draggable="true"]:hover {
+  transform: translateY(-1px);
+}
+
+[draggable="true"]:active {
+  transform: scale(0.98);
+}
+
+/* Alert/Banner styles */
+.editorial-banner {
+  background: #fefce8;
+  border: 1px solid #ca8a04;
+  padding: 0.75rem 1rem;
+}
+
+.editorial-banner-success {
+  background: #f0fdf4;
+  border-color: #16a34a;
+}
+
+.editorial-banner-error {
+  background: #fef2f2;
+  border-color: #dc2626;
+}
+
+/* Loading Spinner */
+.editorial-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--border-light);
+  border-top-color: var(--ink-black);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Focus States */
+*:focus-visible {
+  outline: 2px solid var(--ink-black);
+  outline-offset: 2px;
+}
+
+/* Selection */
+::selection {
+  background: var(--ink-black);
+  color: white;
+}
