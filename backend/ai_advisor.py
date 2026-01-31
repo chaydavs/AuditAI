@@ -220,6 +220,7 @@ class VTAdvisor:
 
     def __init__(self):
         self.courses = self._load_courses()
+        self.gemini_client = None
         self.gemini_model = None
         self._init_gemini()
 
@@ -233,21 +234,16 @@ class VTAdvisor:
             return {}
 
     def _init_gemini(self):
-        """Initialize Gemini AI model"""
+        """Initialize Gemini AI client"""
         api_key = os.getenv("GEMINI_API_KEY")
         if api_key:
             try:
-                import google.generativeai as genai
-                genai.configure(api_key=api_key)
-                self.gemini_model = genai.GenerativeModel(
-                    "gemini-2.0-flash-lite",
-                    generation_config={
-                        "response_mime_type": "application/json",
-                        "temperature": 0.3
-                    }
-                )
+                from google import genai
+                self.gemini_client = genai.Client(api_key=api_key)
+                self.gemini_model = "gemini-2.0-flash-lite"
             except Exception as e:
                 print(f"Gemini init failed: {e}")
+                self.gemini_client = None
 
     def _build_context(self) -> str:
         """Build comprehensive context for AI with all rules and data"""
@@ -564,7 +560,7 @@ Year 4: Capstone + electives
 
         # Get AI-enhanced analysis if available
         ai_suggestions = []
-        if self.gemini_model:
+        if self.gemini_client:
             try:
                 ai_response = await self._get_ai_suggestions(plan, completed, issues, warnings, major_name, minor_name)
                 if ai_response:
@@ -593,7 +589,7 @@ Year 4: Capstone + electives
                                   issues: List[str], warnings: List[str],
                                   major_name: str = "Computer Science", minor_name: str = None) -> Dict:
         """Get AI-enhanced suggestions from Gemini"""
-        if not self.gemini_model:
+        if not self.gemini_client:
             return {}
 
         context = self._build_context()
@@ -640,7 +636,14 @@ Focus on:
 5. {'Courses that would fulfill both major and minor requirements' if minor_name else 'Potential minors that complement their major'}"""
 
         try:
-            response = self.gemini_model.generate_content(prompt)
+            response = self.gemini_client.models.generate_content(
+                model=self.gemini_model,
+                contents=prompt,
+                config={
+                    "response_mime_type": "application/json",
+                    "temperature": 0.3
+                }
+            )
             return json.loads(response.text)
         except:
             return {}

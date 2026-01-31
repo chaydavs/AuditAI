@@ -1085,13 +1085,8 @@ def parse_audit_with_ai(text: str) -> AuditResult:
         raise ValueError("GEMINI_API_KEY not set")
 
     try:
-        import google.generativeai as genai
-        genai.configure(api_key=api_key)
-
-        model = genai.GenerativeModel(
-            "gemini-2.0-flash-lite",
-            generation_config={"response_mime_type": "application/json", "temperature": 0.1}
-        )
+        from google import genai
+        client = genai.Client(api_key=api_key)
 
         prompt = """You are parsing a Virginia Tech DARS (Degree Audit Reporting System) document.
 
@@ -1121,7 +1116,14 @@ RULES:
 Virginia Tech DARS Document:
 """ + text[:12000]
 
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(
+            model="gemini-2.0-flash-lite",
+            contents=prompt,
+            config={
+                "response_mime_type": "application/json",
+                "temperature": 0.1
+            }
+        )
         data = json.loads(response.text)
 
         return AuditResult(
