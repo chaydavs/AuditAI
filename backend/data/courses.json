@@ -12321,8 +12321,7 @@
     "name": "Software Design and Data Structures",
     "credits": 3,
     "prereqs": [
-      "CS 1114",
-      "CS 2064"
+      "CS 1114"
     ],
     "coreqs": [],
     "category": "cs_core",
@@ -12360,7 +12359,7 @@
     "name": "Introduction to Computer Organization",
     "credits": 3,
     "prereqs": [
-      "CS 2114"
+      "CS 1114"
     ],
     "coreqs": [
       "MATH 2534",
@@ -12373,12 +12372,8 @@
     "name": "Introduction to Computer Organization",
     "credits": 3,
     "prereqs": [
-      "CS 2114",
-      "ECE 3514",
       "CS 2505",
-      "ECE 2564",
-      "MATH 2534",
-      "MATH 3034"
+      "CS 2114"
     ],
     "coreqs": [],
     "category": "cs_core",
@@ -12413,11 +12408,7 @@
     "credits": 3,
     "prereqs": [
       "CS 2114",
-      "ECE 3514",
-      "CS 2505",
-      "ECE 2564",
-      "MATH 2534",
-      "MATH 3034"
+      "CS 2505"
     ],
     "coreqs": [],
     "category": "cs_core",
@@ -12428,9 +12419,7 @@
     "credits": 3,
     "prereqs": [
       "CS 2506",
-      "CS 2114",
-      "ECE 2564",
-      "ECE 3574"
+      "CS 3114"
     ],
     "coreqs": [],
     "category": "cs_core",
@@ -12536,7 +12525,7 @@
     "name": "Intermediate Software Design and Engineering",
     "credits": 3,
     "prereqs": [
-      "CS 2114"
+      "CS 3114"
     ],
     "coreqs": [],
     "category": "cs_elective",
@@ -12557,10 +12546,7 @@
     "name": "Introduction to Human-Computer Interaction",
     "credits": 3,
     "prereqs": [
-      "CS 1114",
-      "CS 1044",
-      "CS 1054",
-      "CS 1064"
+      "CS 2114"
     ],
     "coreqs": [],
     "category": "cs_elective",
@@ -12650,8 +12636,7 @@
     "credits": 3,
     "prereqs": [
       "CS 3114",
-      "MATH 3034",
-      "MATH 3134"
+      "MATH 2534"
     ],
     "coreqs": [],
     "category": "cs_theory",
@@ -12661,8 +12646,7 @@
     "name": "Introduction to Formal Languages and Automata Theory",
     "credits": 3,
     "prereqs": [
-      "MATH 3134",
-      "MATH 3034"
+      "CS 3114"
     ],
     "coreqs": [],
     "category": "cs_systems",
@@ -12757,9 +12741,7 @@
     "name": "Principles of Computer Security",
     "credits": 3,
     "prereqs": [
-      "CS 3214",
-      "ECE 3504",
-      "ECE 3574"
+      "CS 3214"
     ],
     "coreqs": [],
     "category": "cs_elective",
@@ -12782,7 +12764,6 @@
     "name": "Systems & Networking Capstone",
     "credits": 3,
     "prereqs": [
-      "CS 3114",
       "CS 3214"
     ],
     "coreqs": [],
@@ -31489,9 +31470,7 @@
   "MATH 1225": {
     "name": "Calculus of a Single Variable",
     "credits": 4,
-    "prereqs": [
-      "MATH 1214"
-    ],
+    "prereqs": [],
     "coreqs": [],
     "category": "math_core",
     "description": "1225-1226: CALCULUS OF A SINGLE VARIABLE Quantitative and computational thinking to address relevant intercultural and global issues. Unified calculus course covering techniques of differential and integral calculus for functions of one variable. Constitutes the standard first-year mathematics courses for science and engineering. 1225: limits, continuity, differentiation, transcendental functions, applications of differentiation, introduction to integration. Assumes 2 units of high school algebr"
@@ -31570,7 +31549,6 @@
     "name": "Introduction to Linear Algebra",
     "credits": 3,
     "prereqs": [
-      "MATH 1225",
       "MATH 1226"
     ],
     "coreqs": [],
@@ -31625,10 +31603,7 @@
     "name": "Introduction to Discrete Mathematics",
     "credits": 3,
     "prereqs": [
-      "CS 1114",
-      "ECE 1574",
-      "ECE 1004",
-      "CS 2064"
+      "MATH 1225"
     ],
     "coreqs": [],
     "category": "math_discrete",
@@ -36522,8 +36497,8 @@
     "name": "Foundations of Physics",
     "credits": 4,
     "prereqs": [
-      "MATH 1226",
-      "PHYS 2305"
+      "PHYS 2305",
+      "MATH 1226"
     ],
     "coreqs": [
       "MATH 1206",
