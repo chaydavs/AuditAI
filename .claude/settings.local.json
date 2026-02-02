@@ -34,7 +34,13 @@
       "WebFetch(domain:students.cs.vt.edu)",
       "WebFetch(domain:eng.vt.edu)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(git -C /Users/chaitanyadavuluri/HokieAd log --oneline -20)",
+      "Bash(git -C /Users/chaitanyadavuluri/HokieAd log:*)",
+      "Bash(git -C /Users/chaitanyadavuluri/HokieAd show --stat c5921e0)",
+      "mcp__ide__getDiagnostics",
+      "Bash(ls:*)",
+      "Bash(railway:*)"
     ],
     "deny": [],
     "ask": []

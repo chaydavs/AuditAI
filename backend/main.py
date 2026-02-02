@@ -188,115 +188,206 @@ class SharePlanRequest(BaseModel):
 
 
 # =============================================================================
-# DATABASE SETUP (SQLite for users)
+# DATABASE SETUP (PostgreSQL for production, SQLite for local dev)
 # =============================================================================
 
-DB_PATH = "users.db"
+DATABASE_URL = os.getenv("DATABASE_URL")
+USE_POSTGRES = DATABASE_URL is not None
 
-def init_sqlite():
-    """Initialize SQLite database for users"""
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
+if USE_POSTGRES:
+    import psycopg2
+    from psycopg2.extras import RealDictCursor
 
-    # Users table
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            email TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            name TEXT NOT NULL,
-            major TEXT DEFAULT 'CS',
-            minor TEXT DEFAULT NULL,
-            concentration TEXT DEFAULT NULL,
-            start_year INTEGER DEFAULT 2024,
-            grad_year INTEGER DEFAULT 2028,
-            email_verified INTEGER DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
+DB_PATH = "users.db"  # Fallback for local dev
 
-    # Add columns if they don't exist (migration)
-    migrations = [
-        "ALTER TABLE users ADD COLUMN email_verified INTEGER DEFAULT 0",
-        "ALTER TABLE users ADD COLUMN major TEXT DEFAULT 'CS'",
-        "ALTER TABLE users ADD COLUMN minor TEXT DEFAULT NULL",
-        "ALTER TABLE users ADD COLUMN concentration TEXT DEFAULT NULL",
-        "ALTER TABLE users ADD COLUMN start_year INTEGER DEFAULT 2024",
-        "ALTER TABLE users ADD COLUMN grad_year INTEGER DEFAULT 2028",
-    ]
-    for migration in migrations:
-        try:
-            cursor.execute(migration)
-        except:
-            pass  # Column already exists
 
-    # Tokens table for email verification and password reset
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS tokens (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            token TEXT UNIQUE NOT NULL,
-            token_type TEXT NOT NULL,
-            expires_at TIMESTAMP NOT NULL,
-            used INTEGER DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        )
-    """)
+def get_db():
+    """Get database connection (PostgreSQL or SQLite)"""
+    if USE_POSTGRES:
+        conn = psycopg2.connect(DATABASE_URL)
+        return conn
+    else:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        return conn
 
-    # Saved audits table
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS audits (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            major TEXT,
-            completed TEXT,
-            in_progress TEXT,
-            roadmap TEXT,
-            uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        )
-    """)
 
-    # Saved plans table
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS plans (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            name TEXT NOT NULL,
-            plan_data TEXT NOT NULL,
-            is_default INTEGER DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        )
-    """)
+def sql(query: str) -> str:
+    """Convert SQLite-style ? placeholders to PostgreSQL %s if needed"""
+    if USE_POSTGRES:
+        return query.replace("?", "%s")
+    return query
 
-    # Shared plans table
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS shared_plans (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            plan_id INTEGER NOT NULL,
-            user_id INTEGER NOT NULL,
-            share_token TEXT UNIQUE NOT NULL,
-            student_name TEXT,
-            expires_at TIMESTAMP,
-            view_count INTEGER DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (plan_id) REFERENCES plans(id),
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        )
-    """)
+
+def get_cursor(conn):
+    """Get cursor with appropriate row factory"""
+    if USE_POSTGRES:
+        return conn.cursor(cursor_factory=RealDictCursor)
+    return conn.cursor()
+
+
+def init_database():
+    """Initialize database tables (PostgreSQL or SQLite)"""
+    conn = get_db()
+    cursor = get_cursor(conn)
+
+    if USE_POSTGRES:
+        # PostgreSQL schema
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                email TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                name TEXT NOT NULL,
+                major TEXT DEFAULT 'CS',
+                minor TEXT,
+                concentration TEXT,
+                start_year INTEGER DEFAULT 2024,
+                grad_year INTEGER DEFAULT 2028,
+                email_verified INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS tokens (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id),
+                token TEXT UNIQUE NOT NULL,
+                token_type TEXT NOT NULL,
+                expires_at TIMESTAMP NOT NULL,
+                used INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS audits (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id),
+                major TEXT,
+                completed TEXT,
+                in_progress TEXT,
+                roadmap TEXT,
+                uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS plans (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id),
+                name TEXT NOT NULL,
+                plan_data TEXT NOT NULL,
+                is_default INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS shared_plans (
+                id SERIAL PRIMARY KEY,
+                plan_id INTEGER NOT NULL REFERENCES plans(id),
+                user_id INTEGER NOT NULL REFERENCES users(id),
+                share_token TEXT UNIQUE NOT NULL,
+                student_name TEXT,
+                expires_at TIMESTAMP,
+                view_count INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        print("✓ PostgreSQL database initialized")
+    else:
+        # SQLite schema
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                name TEXT NOT NULL,
+                major TEXT DEFAULT 'CS',
+                minor TEXT DEFAULT NULL,
+                concentration TEXT DEFAULT NULL,
+                start_year INTEGER DEFAULT 2024,
+                grad_year INTEGER DEFAULT 2028,
+                email_verified INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        # SQLite migrations for existing databases
+        migrations = [
+            "ALTER TABLE users ADD COLUMN email_verified INTEGER DEFAULT 0",
+            "ALTER TABLE users ADD COLUMN major TEXT DEFAULT 'CS'",
+            "ALTER TABLE users ADD COLUMN minor TEXT DEFAULT NULL",
+            "ALTER TABLE users ADD COLUMN concentration TEXT DEFAULT NULL",
+            "ALTER TABLE users ADD COLUMN start_year INTEGER DEFAULT 2024",
+            "ALTER TABLE users ADD COLUMN grad_year INTEGER DEFAULT 2028",
+        ]
+        for migration in migrations:
+            try:
+                cursor.execute(migration)
+            except:
+                pass
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS tokens (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                token TEXT UNIQUE NOT NULL,
+                token_type TEXT NOT NULL,
+                expires_at TIMESTAMP NOT NULL,
+                used INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS audits (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                major TEXT,
+                completed TEXT,
+                in_progress TEXT,
+                roadmap TEXT,
+                uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS plans (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                plan_data TEXT NOT NULL,
+                is_default INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS shared_plans (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                plan_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                share_token TEXT UNIQUE NOT NULL,
+                student_name TEXT,
+                expires_at TIMESTAMP,
+                view_count INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (plan_id) REFERENCES plans(id),
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        """)
+        print("✓ SQLite database initialized")
 
     conn.commit()
     conn.close()
-    print("✓ SQLite database initialized")
-
-def get_db():
-    """Get database connection"""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
 
 def hash_password(password: str) -> str:
     """Hash password with salt"""
@@ -363,9 +454,9 @@ def create_verification_token(user_id: int) -> str:
     expires_at = datetime.utcnow() + timedelta(hours=24)
 
     conn = get_db()
-    cursor = conn.cursor()
+    cursor = get_cursor(conn)
     cursor.execute(
-        "INSERT INTO tokens (user_id, token, token_type, expires_at) VALUES (?, ?, ?, ?)",
+        sql("INSERT INTO tokens (user_id, token, token_type, expires_at) VALUES (?, ?, ?, ?)"),
         (user_id, token, "email_verification", expires_at)
     )
     conn.commit()
@@ -379,7 +470,7 @@ def create_password_reset_token(user_id: int) -> str:
     expires_at = datetime.utcnow() + timedelta(hours=1)  # 1 hour expiry
 
     conn = get_db()
-    cursor = conn.cursor()
+    cursor = get_cursor(conn)
 
     # Invalidate any existing reset tokens for this user
     cursor.execute(
@@ -388,7 +479,7 @@ def create_password_reset_token(user_id: int) -> str:
     )
 
     cursor.execute(
-        "INSERT INTO tokens (user_id, token, token_type, expires_at) VALUES (?, ?, ?, ?)",
+        sql("INSERT INTO tokens (user_id, token, token_type, expires_at) VALUES (?, ?, ?, ?)"),
         (user_id, token, "password_reset", expires_at)
     )
     conn.commit()
@@ -399,7 +490,7 @@ def create_password_reset_token(user_id: int) -> str:
 def verify_token(token: str, token_type: str) -> Optional[int]:
     """Verify a token and return user_id if valid"""
     conn = get_db()
-    cursor = conn.cursor()
+    cursor = get_cursor(conn)
 
     cursor.execute(
         """SELECT user_id, expires_at FROM tokens
@@ -422,8 +513,8 @@ def verify_token(token: str, token_type: str) -> Optional[int]:
 def mark_token_used(token: str):
     """Mark a token as used"""
     conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("UPDATE tokens SET used = 1 WHERE token = ?", (token,))
+    cursor = get_cursor(conn)
+    cursor.execute(sql("UPDATE tokens SET used = 1 WHERE token = ?"), (token,))
     conn.commit()
     conn.close()
 
@@ -734,7 +825,7 @@ async def close_neo4j():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """App startup/shutdown"""
-    init_sqlite()
+    init_database()
     await init_neo4j()
     yield
     await close_neo4j()
@@ -774,21 +865,28 @@ app.add_middleware(
 async def signup(request: Request, data: UserSignup):
     """Create a new user account"""
     conn = get_db()
-    cursor = conn.cursor()
+    cursor = get_cursor(conn)
 
     # Check if email exists
-    cursor.execute("SELECT id FROM users WHERE email = ?", (data.email,))
+    cursor.execute(sql("SELECT id FROM users WHERE email = ?"), (data.email,))
     if cursor.fetchone():
         conn.close()
         raise HTTPException(400, "Email already registered")
 
     # Create user
     password_hash = hash_password(data.password)
-    cursor.execute(
-        "INSERT INTO users (email, password_hash, name, major, minor, concentration, start_year, grad_year, email_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)",
-        (data.email, password_hash, data.name, data.major, data.minor, data.concentration, data.start_year, data.grad_year)
-    )
-    user_id = cursor.lastrowid
+    if USE_POSTGRES:
+        cursor.execute(
+            "INSERT INTO users (email, password_hash, name, major, minor, concentration, start_year, grad_year, email_verified) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 0) RETURNING id",
+            (data.email, password_hash, data.name, data.major, data.minor, data.concentration, data.start_year, data.grad_year)
+        )
+        user_id = cursor.fetchone()["id"]
+    else:
+        cursor.execute(
+            "INSERT INTO users (email, password_hash, name, major, minor, concentration, start_year, grad_year, email_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)",
+            (data.email, password_hash, data.name, data.major, data.minor, data.concentration, data.start_year, data.grad_year)
+        )
+        user_id = cursor.lastrowid
     conn.commit()
     conn.close()
 
@@ -822,9 +920,9 @@ async def signup(request: Request, data: UserSignup):
 async def login(request: Request, data: UserLogin):
     """Login with email and password"""
     conn = get_db()
-    cursor = conn.cursor()
+    cursor = get_cursor(conn)
 
-    cursor.execute("SELECT id, email, password_hash, name, major, minor, concentration, start_year, grad_year, email_verified FROM users WHERE email = ?", (data.email,))
+    cursor.execute(sql("SELECT id, email, password_hash, name, major, minor, concentration, start_year, grad_year, email_verified FROM users WHERE email = ?"), (data.email,))
     user = cursor.fetchone()
     conn.close()
 
@@ -860,8 +958,8 @@ async def verify_email(data: VerifyEmailRequest):
 
     # Mark email as verified
     conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("UPDATE users SET email_verified = 1 WHERE id = ?", (user_id,))
+    cursor = get_cursor(conn)
+    cursor.execute(sql("UPDATE users SET email_verified = 1 WHERE id = ?"), (user_id,))
     conn.commit()
     conn.close()
 
@@ -875,9 +973,9 @@ async def verify_email(data: VerifyEmailRequest):
 async def resend_verification(data: ResendVerificationRequest):
     """Resend verification email"""
     conn = get_db()
-    cursor = conn.cursor()
+    cursor = get_cursor(conn)
 
-    cursor.execute("SELECT id, name, email_verified FROM users WHERE email = ?", (data.email,))
+    cursor.execute(sql("SELECT id, name, email_verified FROM users WHERE email = ?"), (data.email,))
     user = cursor.fetchone()
     conn.close()
 
@@ -900,9 +998,9 @@ async def resend_verification(data: ResendVerificationRequest):
 async def forgot_password(request: Request, data: ForgotPasswordRequest):
     """Request password reset email"""
     conn = get_db()
-    cursor = conn.cursor()
+    cursor = get_cursor(conn)
 
-    cursor.execute("SELECT id, name FROM users WHERE email = ?", (data.email,))
+    cursor.execute(sql("SELECT id, name FROM users WHERE email = ?"), (data.email,))
     user = cursor.fetchone()
     conn.close()
 
@@ -931,8 +1029,8 @@ async def reset_password(data: ResetPasswordRequest):
     # Update password
     password_hash = hash_password(data.new_password)
     conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("UPDATE users SET password_hash = ? WHERE id = ?", (password_hash, user_id))
+    cursor = get_cursor(conn)
+    cursor.execute(sql("UPDATE users SET password_hash = ? WHERE id = ?"), (password_hash, user_id))
     conn.commit()
     conn.close()
 
@@ -946,8 +1044,8 @@ async def reset_password(data: ResetPasswordRequest):
 async def get_me(user: dict = Depends(require_auth)):
     """Get current user info"""
     conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, email, name, major, minor, concentration, start_year, grad_year, created_at FROM users WHERE id = ?", (user["user_id"],))
+    cursor = get_cursor(conn)
+    cursor.execute(sql("SELECT id, email, name, major, minor, concentration, start_year, grad_year, created_at FROM users WHERE id = ?"), (user["user_id"],))
     row = cursor.fetchone()
     conn.close()
 
@@ -980,7 +1078,7 @@ class ProfileUpdate(BaseModel):
 async def update_profile(data: ProfileUpdate, user: dict = Depends(require_auth)):
     """Update user profile"""
     conn = get_db()
-    cursor = conn.cursor()
+    cursor = get_cursor(conn)
 
     updates = []
     params = []
@@ -1015,7 +1113,7 @@ async def update_profile(data: ProfileUpdate, user: dict = Depends(require_auth)
 
     if updates:
         params.append(user["user_id"])
-        cursor.execute(f"UPDATE users SET {', '.join(updates)} WHERE id = ?", params)
+        cursor.execute(sql(f"UPDATE users SET {', '.join(updates)} WHERE id = ?"), params)
         conn.commit()
 
     conn.close()
@@ -1234,9 +1332,9 @@ async def analyze_audit(
     # Save to database if user is logged in
     if user:
         conn = get_db()
-        cursor = conn.cursor()
+        cursor = get_cursor(conn)
         cursor.execute(
-            "INSERT INTO audits (user_id, major, completed, in_progress, roadmap) VALUES (?, ?, ?, ?, ?)",
+            sql("INSERT INTO audits (user_id, major, completed, in_progress, roadmap) VALUES (?, ?, ?, ?, ?)"),
             (
                 user["user_id"],
                 result.major,
@@ -1261,7 +1359,7 @@ async def analyze_audit(
 async def get_my_audits(user: dict = Depends(require_auth)):
     """Get all saved audits for the current user"""
     conn = get_db()
-    cursor = conn.cursor()
+    cursor = get_cursor(conn)
     cursor.execute(
         "SELECT id, major, completed, in_progress, roadmap, uploaded_at FROM audits WHERE user_id = ? ORDER BY uploaded_at DESC",
         (user["user_id"],)
@@ -1644,7 +1742,7 @@ async def get_graduation_progress(
 
     # Get user's completed courses from their plans
     conn = get_db()
-    cursor = conn.cursor()
+    cursor = get_cursor(conn)
     cursor.execute(
         "SELECT plan_data FROM plans WHERE user_id = ? AND is_default = 1",
         (user["user_id"],)
@@ -1670,7 +1768,7 @@ async def get_graduation_progress(
 async def list_plans(user: dict = Depends(require_auth)):
     """Get all saved plans for the current user"""
     conn = get_db()
-    cursor = conn.cursor()
+    cursor = get_cursor(conn)
     cursor.execute(
         "SELECT id, name, plan_data, is_default, created_at, updated_at FROM plans WHERE user_id = ? ORDER BY updated_at DESC",
         (user["user_id"],)
@@ -1696,17 +1794,24 @@ async def list_plans(user: dict = Depends(require_auth)):
 async def create_plan(data: PlanCreate, user: dict = Depends(require_auth)):
     """Create a new plan"""
     conn = get_db()
-    cursor = conn.cursor()
+    cursor = get_cursor(conn)
 
     # If this is set as default, unset other defaults
     if data.is_default:
-        cursor.execute("UPDATE plans SET is_default = 0 WHERE user_id = ?", (user["user_id"],))
+        cursor.execute(sql("UPDATE plans SET is_default = 0 WHERE user_id = ?"), (user["user_id"],))
 
-    cursor.execute(
-        "INSERT INTO plans (user_id, name, plan_data, is_default) VALUES (?, ?, ?, ?)",
-        (user["user_id"], data.name, json.dumps(data.plan_data), 1 if data.is_default else 0)
-    )
-    plan_id = cursor.lastrowid
+    if USE_POSTGRES:
+        cursor.execute(
+            "INSERT INTO plans (user_id, name, plan_data, is_default) VALUES (%s, %s, %s, %s) RETURNING id",
+            (user["user_id"], data.name, json.dumps(data.plan_data), 1 if data.is_default else 0)
+        )
+        plan_id = cursor.fetchone()["id"]
+    else:
+        cursor.execute(
+            "INSERT INTO plans (user_id, name, plan_data, is_default) VALUES (?, ?, ?, ?)",
+            (user["user_id"], data.name, json.dumps(data.plan_data), 1 if data.is_default else 0)
+        )
+        plan_id = cursor.lastrowid
     conn.commit()
     conn.close()
 
@@ -1726,7 +1831,7 @@ async def create_plan(data: PlanCreate, user: dict = Depends(require_auth)):
 async def get_plan(plan_id: int, user: dict = Depends(require_auth)):
     """Get a specific plan"""
     conn = get_db()
-    cursor = conn.cursor()
+    cursor = get_cursor(conn)
     cursor.execute(
         "SELECT id, name, plan_data, is_default, created_at, updated_at FROM plans WHERE id = ? AND user_id = ?",
         (plan_id, user["user_id"])
@@ -1751,10 +1856,10 @@ async def get_plan(plan_id: int, user: dict = Depends(require_auth)):
 async def update_plan(plan_id: int, data: PlanUpdate, user: dict = Depends(require_auth)):
     """Update an existing plan"""
     conn = get_db()
-    cursor = conn.cursor()
+    cursor = get_cursor(conn)
 
     # Check plan exists and belongs to user
-    cursor.execute("SELECT id FROM plans WHERE id = ? AND user_id = ?", (plan_id, user["user_id"]))
+    cursor.execute(sql("SELECT id FROM plans WHERE id = ? AND user_id = ?"), (plan_id, user["user_id"]))
     if not cursor.fetchone():
         conn.close()
         raise HTTPException(404, "Plan not found")
@@ -1774,14 +1879,14 @@ async def update_plan(plan_id: int, data: PlanUpdate, user: dict = Depends(requi
     if data.is_default is not None:
         if data.is_default:
             # Unset other defaults first
-            cursor.execute("UPDATE plans SET is_default = 0 WHERE user_id = ?", (user["user_id"],))
+            cursor.execute(sql("UPDATE plans SET is_default = 0 WHERE user_id = ?"), (user["user_id"],))
         updates.append("is_default = ?")
         params.append(1 if data.is_default else 0)
 
     updates.append("updated_at = CURRENT_TIMESTAMP")
     params.append(plan_id)
 
-    cursor.execute(f"UPDATE plans SET {', '.join(updates)} WHERE id = ?", params)
+    cursor.execute(sql(f"UPDATE plans SET {', '.join(updates)} WHERE id = ?"), params)
     conn.commit()
     conn.close()
 
@@ -1792,15 +1897,15 @@ async def update_plan(plan_id: int, data: PlanUpdate, user: dict = Depends(requi
 async def delete_plan(plan_id: int, user: dict = Depends(require_auth)):
     """Delete a plan"""
     conn = get_db()
-    cursor = conn.cursor()
+    cursor = get_cursor(conn)
 
     # Check plan exists and belongs to user
-    cursor.execute("SELECT id FROM plans WHERE id = ? AND user_id = ?", (plan_id, user["user_id"]))
+    cursor.execute(sql("SELECT id FROM plans WHERE id = ? AND user_id = ?"), (plan_id, user["user_id"]))
     if not cursor.fetchone():
         conn.close()
         raise HTTPException(404, "Plan not found")
 
-    cursor.execute("DELETE FROM plans WHERE id = ?", (plan_id,))
+    cursor.execute(sql("DELETE FROM plans WHERE id = ?"), (plan_id,))
     conn.commit()
     conn.close()
 
@@ -1811,7 +1916,7 @@ async def delete_plan(plan_id: int, user: dict = Depends(require_auth)):
 async def get_default_plan(user: dict = Depends(require_auth)):
     """Get the user's default plan"""
     conn = get_db()
-    cursor = conn.cursor()
+    cursor = get_cursor(conn)
     cursor.execute(
         "SELECT id, name, plan_data, is_default, created_at, updated_at FROM plans WHERE user_id = ? AND is_default = 1",
         (user["user_id"],)
@@ -1842,10 +1947,10 @@ async def get_default_plan(user: dict = Depends(require_auth)):
 async def create_share_link(data: SharePlanRequest, user: dict = Depends(require_auth)):
     """Generate a shareable link for a plan"""
     conn = get_db()
-    cursor = conn.cursor()
+    cursor = get_cursor(conn)
 
     # Verify plan belongs to user
-    cursor.execute("SELECT id, name FROM plans WHERE id = ? AND user_id = ?", (data.plan_id, user["user_id"]))
+    cursor.execute(sql("SELECT id, name FROM plans WHERE id = ? AND user_id = ?"), (data.plan_id, user["user_id"]))
     plan = cursor.fetchone()
     if not plan:
         conn.close()
@@ -1860,12 +1965,12 @@ async def create_share_link(data: SharePlanRequest, user: dict = Depends(require
         expires_at = (datetime.utcnow() + timedelta(days=data.expires_days)).isoformat()
 
     # Get user name for student_name if not provided
-    cursor.execute("SELECT name FROM users WHERE id = ?", (user["user_id"],))
+    cursor.execute(sql("SELECT name FROM users WHERE id = ?"), (user["user_id"],))
     user_row = cursor.fetchone()
     student_name = data.student_name or user_row["name"]
 
     cursor.execute(
-        "INSERT INTO shared_plans (plan_id, user_id, share_token, student_name, expires_at) VALUES (?, ?, ?, ?, ?)",
+        sql("INSERT INTO shared_plans (plan_id, user_id, share_token, student_name, expires_at) VALUES (?, ?, ?, ?, ?)"),
         (data.plan_id, user["user_id"], share_token, student_name, expires_at)
     )
     conn.commit()
@@ -1886,15 +1991,15 @@ async def create_share_link(data: SharePlanRequest, user: dict = Depends(require
 async def get_shared_plan(share_token: str):
     """View a shared plan (public, no auth required)"""
     conn = get_db()
-    cursor = conn.cursor()
+    cursor = get_cursor(conn)
 
-    cursor.execute("""
+    cursor.execute(sql("""
         SELECT sp.id, sp.plan_id, sp.student_name, sp.expires_at, sp.view_count,
                p.name as plan_name, p.plan_data
         FROM shared_plans sp
         JOIN plans p ON sp.plan_id = p.id
         WHERE sp.share_token = ?
-    """, (share_token,))
+    """), (share_token,))
     share = cursor.fetchone()
 
     if not share:
@@ -1909,7 +2014,7 @@ async def get_shared_plan(share_token: str):
             raise HTTPException(410, "This shared link has expired")
 
     # Increment view count
-    cursor.execute("UPDATE shared_plans SET view_count = view_count + 1 WHERE id = ?", (share["id"],))
+    cursor.execute(sql("UPDATE shared_plans SET view_count = view_count + 1 WHERE id = ?"), (share["id"],))
     conn.commit()
     conn.close()
 
@@ -1925,16 +2030,16 @@ async def get_shared_plan(share_token: str):
 async def list_my_shares(user: dict = Depends(require_auth)):
     """List all shared links created by user"""
     conn = get_db()
-    cursor = conn.cursor()
+    cursor = get_cursor(conn)
 
-    cursor.execute("""
+    cursor.execute(sql("""
         SELECT sp.id, sp.share_token, sp.student_name, sp.expires_at, sp.view_count, sp.created_at,
                p.name as plan_name
         FROM shared_plans sp
         JOIN plans p ON sp.plan_id = p.id
         WHERE sp.user_id = ?
         ORDER BY sp.created_at DESC
-    """, (user["user_id"],))
+    """), (user["user_id"],))
     rows = cursor.fetchall()
     conn.close()
 
@@ -1958,14 +2063,14 @@ async def list_my_shares(user: dict = Depends(require_auth)):
 async def delete_share(share_id: int, user: dict = Depends(require_auth)):
     """Delete a share link"""
     conn = get_db()
-    cursor = conn.cursor()
+    cursor = get_cursor(conn)
 
-    cursor.execute("SELECT id FROM shared_plans WHERE id = ? AND user_id = ?", (share_id, user["user_id"]))
+    cursor.execute(sql("SELECT id FROM shared_plans WHERE id = ? AND user_id = ?"), (share_id, user["user_id"]))
     if not cursor.fetchone():
         conn.close()
         raise HTTPException(404, "Share not found")
 
-    cursor.execute("DELETE FROM shared_plans WHERE id = ?", (share_id,))
+    cursor.execute(sql("DELETE FROM shared_plans WHERE id = ?"), (share_id,))
     conn.commit()
     conn.close()
 
