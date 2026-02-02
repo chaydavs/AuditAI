@@ -192,7 +192,15 @@ class SharePlanRequest(BaseModel):
 # =============================================================================
 
 DATABASE_URL = os.getenv("DATABASE_URL")
-USE_POSTGRES = DATABASE_URL is not None
+# Clean up the URL - remove any surrounding quotes, whitespace, and control characters
+if DATABASE_URL:
+    # Remove any control characters and clean whitespace
+    import re
+    DATABASE_URL = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', DATABASE_URL)
+    DATABASE_URL = DATABASE_URL.strip().strip('"').strip("'").strip()
+    print(f"DATABASE_URL detected: {DATABASE_URL[:50]}..." if len(DATABASE_URL) > 50 else f"DATABASE_URL detected: {DATABASE_URL}")
+USE_POSTGRES = DATABASE_URL is not None and DATABASE_URL.startswith("postgresql")
+print(f"Using PostgreSQL: {USE_POSTGRES}")
 
 if USE_POSTGRES:
     import psycopg2
@@ -204,8 +212,23 @@ DB_PATH = "users.db"  # Fallback for local dev
 def get_db():
     """Get database connection (PostgreSQL or SQLite)"""
     if USE_POSTGRES:
-        conn = psycopg2.connect(DATABASE_URL)
-        return conn
+        # Parse URL to handle any encoding issues
+        from urllib.parse import urlparse
+        parsed = urlparse(DATABASE_URL)
+        print(f"Connecting to PostgreSQL at {parsed.hostname}:{parsed.port}...")
+        try:
+            conn = psycopg2.connect(
+                host=parsed.hostname,
+                port=parsed.port or 5432,
+                user=parsed.username,
+                password=parsed.password,
+                database=parsed.path.lstrip('/')
+            )
+            return conn
+        except Exception as e:
+            print(f"PostgreSQL connection failed: {e}")
+            print(f"Host: {parsed.hostname}, Port: {parsed.port}, User: {parsed.username}, DB: {parsed.path.lstrip('/')}")
+            raise
     else:
         conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
