@@ -675,6 +675,11 @@ export default function App() {
     balanced: true,
   })
 
+  // Auto-plan priority and career path
+  const [planPriority, setPlanPriority] = useState('on_time')
+  const [planCareerPath, setPlanCareerPath] = useState('')
+  const [autoplanWarnings, setAutoplanWarnings] = useState([])
+
   // Get completed courses from DARS
   const completedCodes = useMemo(() => {
     return new Set(result?.completed?.map(c => c.code) || [])
@@ -704,13 +709,29 @@ export default function App() {
     return taken
   }, [semesterPlan, completedCodes, inProgressCodes])
 
-  // Check if prereqs are met
+  // Evaluate AND/OR prerequisite tree
+  const evaluatePrereqTree = useCallback((node, takenSet) => {
+    if (!node) return true
+    if (node.type === 'COURSE') return takenSet.has(node.code)
+    if (node.type === 'AND') return (node.requirements || []).every(r => evaluatePrereqTree(r, takenSet))
+    if (node.type === 'OR') return (node.requirements || []).some(r => evaluatePrereqTree(r, takenSet))
+    return true
+  }, [])
+
+  // Check if prereqs are met (supports AND/OR trees)
   const prereqsMet = useCallback((code, semesterId) => {
     const info = allCourses[code]
     if (!info) return true
     const taken = getCoursesBeforeSemester(semesterId)
-    return info.prereqs.every(p => taken.has(p))
-  }, [getCoursesBeforeSemester])
+
+    // Use structured prereqs if available
+    if (info.prereqs_structured) {
+      return evaluatePrereqTree(info.prereqs_structured, taken)
+    }
+
+    // Fallback to flat list (AND-all)
+    return (info.prereqs || []).every(p => taken.has(p))
+  }, [getCoursesBeforeSemester, evaluatePrereqTree])
 
   // Get semester credits
   const getSemesterCredits = useCallback((semesterId) => {
@@ -833,123 +854,110 @@ export default function App() {
     return categories
   }, [allCourses, courseSearch])
 
-  // Generate optimal schedule based on preferences
-  const generateOptimalSchedule = () => {
+  // Generate optimal schedule - uses backend API with fallback to local algorithm
+  const generateOptimalSchedule = async () => {
+    setAnalyzing(true)
+    setAutoplanWarnings([])
+
+    try {
+      // Try backend API first
+      const res = await fetch(`${API}/auto-plan`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(localStorage.getItem('token') ? { Authorization: `Bearer ${localStorage.getItem('token')}` } : {})
+        },
+        body: JSON.stringify({
+          major: user?.major || 'CS',
+          minor: user?.minor || null,
+          concentration: user?.concentration || null,
+          completed: [...completedCodes],
+          in_progress: [...inProgressCodes],
+          start_semester: 'fall1',
+          remaining_semesters: 8,
+          priority: planPriority,
+          career_path: planCareerPath || null,
+          preferences: {
+            max_credits: preferences.balanced ? 15 : 18,
+            balanced: preferences.balanced,
+          }
+        })
+      })
+      const data = await res.json()
+      if (data.success && data.plan) {
+        setSemesterPlan(data.plan)
+        if (data.warnings && data.warnings.length > 0) {
+          setAutoplanWarnings(data.warnings)
+        }
+        setAnalyzing(false)
+        return
+      }
+    } catch (err) {
+      console.log('Backend auto-plan unavailable, using local algorithm:', err.message)
+    }
+
+    // Fallback: local algorithm
+    generateLocalSchedule()
+    setAnalyzing(false)
+  }
+
+  // Local fallback auto-planner (works offline)
+  const generateLocalSchedule = () => {
     const newPlan = { ...EMPTY_PLAN }
     const alreadyTaken = new Set([...completedCodes, ...inProgressCodes])
 
-    // VT CS typical sequence - courses that should be prioritized
-    const coreSequence = [
-      // Year 1
-      "CS 1114", "CS 1064", "MATH 1225",
-      // Year 1-2
-      "MATH 1226", "CS 2114", "CS 2505", "MATH 2114",
-      // Year 2
-      "CS 2506", "CS 3114", "STAT 3006",
-      // Year 2-3
-      "CS 3214",
-      // Year 3+
-      "CS 4104"
-    ]
-
-    // Get all courses to place, prioritizing core sequence
+    // Get all courses to place, prioritizing required/core
     const toPlace = []
     const addedToPlace = new Set()
 
-    // First add core courses in sequence order
-    coreSequence.forEach(code => {
-      if (!alreadyTaken.has(code) && allCourses[code] && !addedToPlace.has(code)) {
-        toPlace.push(code)
-        addedToPlace.add(code)
-      }
-    })
-
-    // Then add other required/core courses
     Object.entries(allCourses).forEach(([code, info]) => {
       if (!alreadyTaken.has(code) && !addedToPlace.has(code)) {
-        if (info.required || info.category === 'cs_core' || info.category === 'math_core' || info.category === 'math_discrete' || info.category === 'stats' || info.category === 'science') {
+        if (info.required || ['cs_core','math_core','math_discrete','stats','science'].includes(info.category)) {
           toPlace.push(code)
           addedToPlace.add(code)
         }
       }
     })
 
-    // Helper: Get the earliest semester a course can be placed (after all prereqs)
     const getEarliestSemester = (code, placedBySemester) => {
       const info = allCourses[code]
       if (!info) return 0
-
       const prereqs = info.prereqs || []
       if (prereqs.length === 0) return 0
 
       let minSemester = 0
       for (const prereq of prereqs) {
-        if (alreadyTaken.has(prereq)) continue // Already completed
-
-        // Find which semester the prereq is in
+        if (alreadyTaken.has(prereq)) continue
         let prereqSem = -1
         for (let i = 0; i < SEMESTERS.length; i++) {
-          if (placedBySemester[i]?.includes(prereq)) {
-            prereqSem = i
-            break
-          }
+          if (placedBySemester[i]?.includes(prereq)) { prereqSem = i; break }
         }
-
-        if (prereqSem === -1) {
-          // Prereq not placed yet - need to place it first
-          return -1
-        }
-
-        // Must be AFTER the prereq semester
+        if (prereqSem === -1) return -1
         minSemester = Math.max(minSemester, prereqSem + 1)
       }
-
       return minSemester
     }
 
-    // Build semester arrays
     const placedBySemester = SEMESTERS.map(() => [])
     const placed = new Set([...alreadyTaken])
+    let changed = true, passes = 0
 
-    // Multiple passes to handle dependencies
-    let changed = true
-    let passes = 0
-    const maxPasses = 20
-
-    while (changed && passes < maxPasses) {
+    while (changed && passes < 20) {
       changed = false
       passes++
-
       for (let i = toPlace.length - 1; i >= 0; i--) {
         const code = toPlace[i]
-        if (placed.has(code)) {
-          toPlace.splice(i, 1)
-          continue
-        }
-
+        if (placed.has(code)) { toPlace.splice(i, 1); continue }
         const earliestSem = getEarliestSemester(code, placedBySemester)
-
-        if (earliestSem === -1) continue // Prerequisites not yet placed
-
-        // Find a semester starting from earliest that has room
+        if (earliestSem === -1) continue
         for (let semIdx = earliestSem; semIdx < SEMESTERS.length; semIdx++) {
-          const semCredits = placedBySemester[semIdx].reduce(
-            (sum, c) => sum + (allCourses[c]?.credits || 3), 0
-          )
-          const courseCredits = allCourses[code]?.credits || 3
-
-          // Check if adding this course stays under limit
+          const semCredits = placedBySemester[semIdx].reduce((s, c) => s + (allCourses[c]?.credits || 3), 0)
           const maxCredits = preferences.balanced ? 15 : 18
-          if (semCredits + courseCredits <= maxCredits) {
-            // Check difficulty balance if preferred
+          if (semCredits + (allCourses[code]?.credits || 3) <= maxCredits) {
             if (preferences.balanced) {
-              const hardCourses = placedBySemester[semIdx].filter(
-                c => (allCourses[c]?.difficulty || 3) >= 4
-              ).length
-              const isHard = (allCourses[code]?.difficulty || 3) >= 4
-              if (isHard && hardCourses >= 2) continue // Too many hard courses
+              const hardCount = placedBySemester[semIdx].filter(c => (allCourses[c]?.difficulty || 3) >= 4).length
+              if ((allCourses[code]?.difficulty || 3) >= 4 && hardCount >= 2) continue
             }
-
             placedBySemester[semIdx].push(code)
             placed.add(code)
             toPlace.splice(i, 1)
@@ -960,11 +968,7 @@ export default function App() {
       }
     }
 
-    // Convert to plan format
-    SEMESTERS.forEach((sem, idx) => {
-      newPlan[sem.id] = placedBySemester[idx]
-    })
-
+    SEMESTERS.forEach((sem, idx) => { newPlan[sem.id] = placedBySemester[idx] })
     setSemesterPlan(newPlan)
   }
 
@@ -3037,23 +3041,51 @@ export default function App() {
               </div>
             </div>
 
-            {/* Preference Checkboxes */}
-            <div className="bg-white border border-slate-300 p-4 mb-6 flex flex-wrap gap-4">
-              <span className="text-xs font-bold uppercase tracking-widest text-slate-500">Optimize for:</span>
-              {[
-                { key: 'easiest', label: 'Easiest Classes' },
-                { key: 'bestProfessors', label: 'Best Professors' },
-                { key: 'leastWorkload', label: 'Least Workload' },
-                { key: 'lateTimes', label: 'Late Start Times' },
-                { key: 'balanced', label: 'Balanced Load' },
-              ].map(({ key, label }) => (
-                <label key={key} className="flex items-center gap-1.5 text-xs cursor-pointer">
-                  <input type="checkbox" checked={preferences[key]}
-                    onChange={(e) => setPreferences(p => ({ ...p, [key]: e.target.checked }))}
-                    className="w-3.5 h-3.5 border-slate-900 text-slate-900 focus:ring-slate-900" />
-                  {label}
-                </label>
-              ))}
+            {/* Planning Priority & Preferences */}
+            <div className="bg-white border border-slate-300 p-4 mb-6">
+              <div className="flex flex-wrap items-center gap-4 mb-3">
+                <span className="text-xs font-bold uppercase tracking-widest text-slate-500">Planning Mode:</span>
+                <select value={planPriority} onChange={e => setPlanPriority(e.target.value)}
+                  className="px-2 py-1 text-xs border border-slate-300 bg-white text-slate-900 focus:ring-slate-900 focus:border-slate-900">
+                  <option value="on_time">Graduate On Time</option>
+                  <option value="maximize_gpa">Maximize GPA</option>
+                  <option value="career_optimized">Career Optimized</option>
+                </select>
+                {planPriority === 'career_optimized' && (
+                  <select value={planCareerPath} onChange={e => setPlanCareerPath(e.target.value)}
+                    className="px-2 py-1 text-xs border border-slate-300 bg-white text-slate-900 focus:ring-slate-900 focus:border-slate-900">
+                    <option value="">Select Career Path</option>
+                    <option value="software_engineering">Software Engineering</option>
+                    <option value="ai_ml">AI & Machine Learning</option>
+                    <option value="systems">Systems & Infrastructure</option>
+                    <option value="security">Cybersecurity</option>
+                    <option value="hci">Human-Computer Interaction</option>
+                    <option value="data_science">Data Science</option>
+                  </select>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-4">
+                <span className="text-xs font-bold uppercase tracking-widest text-slate-500">Optimize for:</span>
+                {[
+                  { key: 'easiest', label: 'Easiest Classes' },
+                  { key: 'bestProfessors', label: 'Best Professors' },
+                  { key: 'leastWorkload', label: 'Least Workload' },
+                  { key: 'lateTimes', label: 'Late Start Times' },
+                  { key: 'balanced', label: 'Balanced Load' },
+                ].map(({ key, label }) => (
+                  <label key={key} className="flex items-center gap-1.5 text-xs cursor-pointer">
+                    <input type="checkbox" checked={preferences[key]}
+                      onChange={(e) => setPreferences(p => ({ ...p, [key]: e.target.checked }))}
+                      className="w-3.5 h-3.5 border-slate-900 text-slate-900 focus:ring-slate-900" />
+                    {label}
+                  </label>
+                ))}
+              </div>
+              {autoplanWarnings.length > 0 && (
+                <div className="mt-3 p-2 bg-amber-50 border border-amber-200 text-xs text-amber-800">
+                  {autoplanWarnings.map((w, i) => <div key={i}>{w}</div>)}
+                </div>
+              )}
             </div>
 
             {/* Semester Grid */}

@@ -1262,6 +1262,8 @@ Virginia Tech DARS Document:
 
 def calculate_roadmap(taken_codes: List[str]) -> dict:
     """Calculate available and locked courses based on what's taken"""
+    from models.prerequisite import evaluate_prereqs, get_missing_prereqs
+
     taken_set = set(c.upper().replace(" ", "").replace("-", "") for c in taken_codes)
 
     def normalize(code):
@@ -1275,21 +1277,38 @@ def calculate_roadmap(taken_codes: List[str]) -> dict:
         if norm_code in taken_set:
             continue
 
-        prereqs = info["prereqs"]
-        missing = [p for p in prereqs if normalize(p) not in taken_set]
-
-        if not missing:
-            available.append({
-                "code": code,
-                "name": info["name"],
-                "prerequisites": prereqs
-            })
+        # Check structured prereqs if available, otherwise flat list
+        structured = info.get("prereqs_structured")
+        if structured:
+            if evaluate_prereqs(structured, taken_set):
+                available.append({
+                    "code": code,
+                    "name": info["name"],
+                    "prerequisites": info.get("prereqs", [])
+                })
+            else:
+                missing = get_missing_prereqs(structured, taken_set)
+                locked.append({
+                    "code": code,
+                    "name": info["name"],
+                    "missing_prereqs": missing
+                })
         else:
-            locked.append({
-                "code": code,
-                "name": info["name"],
-                "missing_prereqs": missing
-            })
+            prereqs = info.get("prereqs", [])
+            missing = [p for p in prereqs if normalize(p) not in taken_set]
+
+            if not missing:
+                available.append({
+                    "code": code,
+                    "name": info["name"],
+                    "prerequisites": prereqs
+                })
+            else:
+                locked.append({
+                    "code": code,
+                    "name": info["name"],
+                    "missing_prereqs": missing
+                })
 
     available.sort(key=lambda x: x["code"])
     locked.sort(key=lambda x: x["code"])
@@ -1679,6 +1698,105 @@ async def simulate_course(data: SimulateCourseRequest):
 async def get_career_paths():
     """Get available career paths and their recommended courses"""
     return {"success": True, "careerPaths": CAREER_PATHS}
+
+
+# =============================================================================
+# AUTO-PLAN ENDPOINT
+# =============================================================================
+
+class AutoPlanRequest(BaseModel):
+    major: str = "CS"
+    minor: Optional[str] = None
+    concentration: Optional[str] = None
+    completed: List[str] = []
+    in_progress: List[str] = []
+    start_semester: str = "fall1"
+    remaining_semesters: int = 8
+    priority: str = "on_time"  # "on_time", "maximize_gpa", "career_optimized"
+    career_path: Optional[str] = None
+    preferences: Dict = {}
+
+
+@app.post("/auto-plan")
+async def generate_auto_plan(data: AutoPlanRequest, user: Optional[dict] = Depends(get_current_user)):
+    """Generate an optimized course plan for any major.
+
+    Supports three priority modes:
+    - on_time: Graduate in 4 years, front-load prerequisites
+    - maximize_gpa: Easiest path, spread hard courses
+    - career_optimized: Align electives with career goals
+    """
+    try:
+        from auto_planner import AutoPlanner
+        from degree_requirements_loader import load_requirements
+
+        # Load degree requirements
+        degree_req = load_requirements(data.major.upper(), data.concentration)
+        if not degree_req:
+            # Fall back to basic CS requirements
+            degree_req = load_requirements("CS")
+            if not degree_req:
+                raise HTTPException(404, f"No degree requirements found for {data.major}")
+
+        # Build offering patterns from course data
+        offering_patterns = {}
+        for code, info in CS_COURSES.items():
+            offered = info.get("typically_offered", [])
+            if offered:
+                offering_patterns[code] = offered
+
+        # Create planner and generate plan
+        planner = AutoPlanner(CS_COURSES, degree_req, offering_patterns)
+        result = planner.generate_plan(
+            completed=data.completed,
+            in_progress=data.in_progress,
+            start_semester=data.start_semester,
+            remaining_semesters=data.remaining_semesters,
+            priority=data.priority,
+            career_path=data.career_path,
+            preferences=data.preferences,
+        )
+
+        return {
+            "success": True,
+            "plan": result["schedule"],
+            "metadata": result["metadata"],
+            "warnings": result["warnings"],
+            "unplaced": result["unplaced"],
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Auto-plan error: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"success": False, "error": str(e)}
+
+
+@app.get("/degree-requirements/v2/{major}")
+async def get_degree_requirements_v2(major: str, concentration: Optional[str] = None):
+    """Get degree requirements for any major from the JSON database."""
+    from degree_requirements_loader import load_requirements, list_available_programs
+
+    req = load_requirements(major.upper(), concentration)
+    if not req:
+        available = list_available_programs()
+        return {
+            "success": False,
+            "error": f"Requirements not found for {major}",
+            "available_programs": available
+        }
+
+    return {"success": True, "requirements": req}
+
+
+@app.get("/programs")
+async def list_programs():
+    """List all programs with full degree requirements available."""
+    from degree_requirements_loader import list_available_programs
+    programs = list_available_programs()
+    return {"success": True, "programs": programs, "total": len(programs)}
 
 
 @app.get("/degree-requirements")

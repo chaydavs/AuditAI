@@ -1,0 +1,313 @@
+{
+  "metadata": {
+    "last_updated": "2026-02-03T00:00:00",
+    "catalog_year": "2025-2026",
+    "total_programs": 7,
+    "source": "manually_defined"
+  },
+  "programs": {
+    "CS": {
+      "major_code": "CS",
+      "major_name": "Computer Science",
+      "degree": "BS",
+      "college": "College of Engineering",
+      "total_credits": 120,
+      "core_courses": [
+        "CS 1114", "CS 2114", "CS 2505", "CS 2506",
+        "CS 3114", "CS 3214", "CS 4104"
+      ],
+      "choice_requirements": {
+        "systems_elective": {
+          "pick": 1,
+          "from": ["CS 4114", "CS 4254", "CS 4284"]
+        },
+        "capstone": {
+          "pick": 1,
+          "from": ["CS 4704", "CS 4784", "CS 4884", "CS 4274", "CS 4664", "CS 4094"]
+        },
+        "discrete_math": {
+          "pick": 1,
+          "from": ["MATH 2534", "MATH 3034"]
+        },
+        "statistics": {
+          "pick": 1,
+          "from": ["STAT 4705", "STAT 4714", "STAT 3005", "STAT 3104"]
+        }
+      },
+      "elective_requirements": {
+        "cs_electives_3000+": {
+          "min_courses": 4,
+          "min_credits": 12,
+          "filter": "CS 3000+"
+        },
+        "technical_electives": {
+          "min_courses": 2,
+          "min_credits": 6,
+          "filter": "STEM 2000+"
+        }
+      },
+      "math_requirements": ["MATH 1225", "MATH 1226", "MATH 2114"],
+      "science_requirements": {
+        "pick_sequences": 1,
+        "sequences": [
+          {"name": "Physics", "courses": ["PHYS 2305", "PHYS 2306"]},
+          {"name": "Chemistry", "courses": ["CHEM 1035", "CHEM 1036"]},
+          {"name": "Biology", "courses": ["BIOL 1105", "BIOL 1106"]}
+        ]
+      },
+      "pathways_credits": 27,
+      "pathways_areas": ["1F", "2F", "3", "5F", "5A", "6A", "6D", "7", "7D", "10", "11"],
+      "recommended_sequence": {
+        "fall_1": ["CS 1114", "MATH 1225", "ENGL 1105", "Pathway"],
+        "spring_1": ["CS 2114", "MATH 1226", "PHYS 2305", "Pathway"],
+        "fall_2": ["CS 2505", "MATH 2114", "MATH 2534", "PHYS 2306"],
+        "spring_2": ["CS 2506", "CS 3114", "STAT 4705", "Pathway"],
+        "fall_3": ["CS 3214", "CS Elective", "Technical Elective", "Pathway"],
+        "spring_3": ["CS 4104", "CS Systems", "CS Elective", "Pathway"],
+        "fall_4": ["CS Elective", "CS Elective", "Capstone", "Pathway"],
+        "spring_4": ["CS Elective", "Technical Elective", "Capstone", "Free Elective"]
+      },
+      "difficulty_ratings": {
+        "CS 1114": 2, "CS 2114": 3, "CS 2505": 3, "CS 2506": 4,
+        "CS 3114": 4, "CS 3214": 5, "CS 4104": 4,
+        "CS 4114": 4, "CS 4254": 4, "CS 4284": 4
+      },
+      "concentrations": {
+        "CS-GEN": {"name": "General Computer Science"},
+        "CS-SYS": {"name": "Systems"},
+        "CS-SEC": {"name": "Security"},
+        "CS-AI": {"name": "Artificial Intelligence & Machine Learning"},
+        "CS-HCI": {"name": "Human-Computer Interaction"},
+        "CS-DATA": {"name": "Data & Analytics"},
+        "CS-TIC": {"name": "Theory & Algorithms"}
+      }
+    },
+    "ECE": {
+      "major_code": "ECE",
+      "major_name": "Electrical and Computer Engineering",
+      "degree": "BS",
+      "college": "College of Engineering",
+      "total_credits": 126,
+      "core_courses": [
+        "ECE 2004", "ECE 2014", "ECE 2074", "ECE 2514",
+        "ECE 2524", "ECE 2564", "ECE 3004", "ECE 3054",
+        "ECE 3074", "ECE 3104", "ECE 3105"
+      ],
+      "choice_requirements": {
+        "capstone": {
+          "pick": 1,
+          "from": ["ECE 4804", "ECE 4805", "ECE 4806"]
+        }
+      },
+      "elective_requirements": {
+        "ece_electives": {
+          "min_courses": 4,
+          "min_credits": 12,
+          "filter": "ECE 3000+"
+        },
+        "technical_electives": {
+          "min_courses": 2,
+          "min_credits": 6,
+          "filter": "STEM 2000+"
+        }
+      },
+      "math_requirements": ["MATH 1225", "MATH 1226", "MATH 2114", "MATH 2204", "MATH 2214"],
+      "science_requirements": {
+        "required": [
+          {"name": "Physics", "courses": ["PHYS 2305", "PHYS 2306"]},
+          {"name": "Chemistry", "courses": ["CHEM 1035"]}
+        ]
+      },
+      "pathways_credits": 18,
+      "recommended_sequence": {},
+      "difficulty_ratings": {
+        "ECE 2004": 3, "ECE 2564": 4, "ECE 3004": 4,
+        "ECE 3074": 3, "ECE 3104": 5
+      },
+      "concentrations": {
+        "CPE-GEN": {"name": "General Computer Engineering"},
+        "CPE-EMB": {"name": "Embedded Systems"},
+        "CPE-NET": {"name": "Networks & Security"},
+        "EE-GEN": {"name": "General Electrical Engineering"},
+        "EE-POW": {"name": "Power & Energy Systems"},
+        "EE-COMM": {"name": "Communications & Signal Processing"}
+      }
+    },
+    "ME": {
+      "major_code": "ME",
+      "major_name": "Mechanical Engineering",
+      "degree": "BS",
+      "college": "College of Engineering",
+      "total_credits": 129,
+      "core_courses": [
+        "ME 2004", "ME 2024", "ME 2134", "ME 2204",
+        "ME 2214", "ME 2304", "ME 3134", "ME 3144",
+        "ME 3304", "ME 3404", "ME 3504", "ME 3524"
+      ],
+      "choice_requirements": {
+        "capstone": {
+          "pick": 1,
+          "from": ["ME 4015", "ME 4016"]
+        }
+      },
+      "elective_requirements": {
+        "me_technical": {
+          "min_courses": 4,
+          "min_credits": 12,
+          "filter": "ME 3000+"
+        }
+      },
+      "math_requirements": ["MATH 1225", "MATH 1226", "MATH 2114", "MATH 2204", "MATH 2214"],
+      "science_requirements": {
+        "required": [
+          {"name": "Physics", "courses": ["PHYS 2305", "PHYS 2306"]},
+          {"name": "Chemistry", "courses": ["CHEM 1035", "CHEM 1036"]}
+        ]
+      },
+      "pathways_credits": 0,
+      "recommended_sequence": {},
+      "difficulty_ratings": {
+        "ME 2134": 4, "ME 3134": 4, "ME 3504": 5, "ME 3404": 4
+      },
+      "concentrations": {
+        "ME-GEN": {"name": "General Mechanical Engineering"},
+        "ME-AUTO": {"name": "Automotive"},
+        "ME-AERO": {"name": "Aerospace Applications"},
+        "ME-THERM": {"name": "Thermal & Fluid Systems"},
+        "ME-MFG": {"name": "Manufacturing"},
+        "ME-BIO": {"name": "Biomechanics"}
+      }
+    },
+    "BIOL": {
+      "major_code": "BIOL",
+      "major_name": "Biological Sciences",
+      "degree": "BS",
+      "college": "College of Science",
+      "total_credits": 120,
+      "core_courses": [
+        "BIOL 1105", "BIOL 1106", "BIOL 2104",
+        "BIOL 2304", "BIOL 2504", "BIOL 3404"
+      ],
+      "choice_requirements": {},
+      "elective_requirements": {
+        "upper_level_biol": {
+          "min_courses": 5,
+          "min_credits": 15,
+          "filter": "BIOL 3000+"
+        },
+        "science_electives": {
+          "min_courses": 2,
+          "min_credits": 6,
+          "filter": "STEM 2000+"
+        }
+      },
+      "math_requirements": ["MATH 1225", "MATH 1226"],
+      "science_requirements": {
+        "required": [
+          {"name": "Chemistry", "courses": ["CHEM 1035", "CHEM 1036", "CHEM 2535", "CHEM 2536"]},
+          {"name": "Physics", "courses": ["PHYS 2305", "PHYS 2306"]}
+        ]
+      },
+      "pathways_credits": 27,
+      "recommended_sequence": {},
+      "difficulty_ratings": {},
+      "concentrations": {
+        "BIOL-GEN": {"name": "General Biology"},
+        "BIOL-CELL": {"name": "Cell & Molecular Biology"},
+        "BIOL-ECO": {"name": "Ecology & Conservation"},
+        "BIOL-MED": {"name": "Pre-Medical"},
+        "BIOL-MICR": {"name": "Microbiology"}
+      }
+    },
+    "BUS": {
+      "major_code": "BUS",
+      "major_name": "Business",
+      "degree": "BS",
+      "college": "Pamplin College of Business",
+      "total_credits": 120,
+      "core_courses": [
+        "ACIS 2115", "ACIS 2116", "BIT 2405", "BIT 2406",
+        "ECON 2005", "ECON 2006", "FIN 3054",
+        "MGT 3304", "MKTG 3104"
+      ],
+      "choice_requirements": {},
+      "elective_requirements": {},
+      "math_requirements": ["MATH 1525"],
+      "science_requirements": {},
+      "pathways_credits": 27,
+      "recommended_sequence": {},
+      "difficulty_ratings": {},
+      "concentrations": {}
+    },
+    "PSYC": {
+      "major_code": "PSYC",
+      "major_name": "Psychology",
+      "degree": "BS",
+      "college": "College of Science",
+      "total_credits": 120,
+      "core_courses": [
+        "PSYC 1004", "PSYC 2004", "PSYC 3014",
+        "PSYC 3024", "PSYC 3044", "PSYC 4204"
+      ],
+      "choice_requirements": {},
+      "elective_requirements": {
+        "psyc_electives": {
+          "min_courses": 5,
+          "min_credits": 15,
+          "filter": "PSYC 3000+"
+        }
+      },
+      "math_requirements": ["STAT 2004"],
+      "science_requirements": {},
+      "pathways_credits": 27,
+      "recommended_sequence": {},
+      "difficulty_ratings": {},
+      "concentrations": {
+        "PSYC-GEN": {"name": "General Psychology"},
+        "PSYC-CLIN": {"name": "Clinical Psychology"},
+        "PSYC-COG": {"name": "Cognitive Psychology"},
+        "PSYC-DEV": {"name": "Developmental Psychology"},
+        "PSYC-SOC": {"name": "Social Psychology"},
+        "PSYC-IO": {"name": "Industrial-Organizational"}
+      }
+    },
+    "CMDA": {
+      "major_code": "CMDA",
+      "major_name": "Computational Modeling and Data Analytics",
+      "degree": "BS",
+      "college": "College of Science",
+      "total_credits": 120,
+      "core_courses": [
+        "CMDA 2005", "CMDA 2006", "CMDA 3605",
+        "CMDA 3654", "CMDA 4654", "CMDA 4864"
+      ],
+      "choice_requirements": {},
+      "elective_requirements": {
+        "cmda_electives": {
+          "min_courses": 3,
+          "min_credits": 9,
+          "filter": "CMDA 3000+"
+        },
+        "domain_electives": {
+          "min_courses": 2,
+          "min_credits": 6,
+          "filter": "STEM 3000+"
+        }
+      },
+      "math_requirements": ["MATH 1225", "MATH 1226", "MATH 2114", "MATH 2204", "MATH 2534"],
+      "science_requirements": {},
+      "pathways_credits": 0,
+      "recommended_sequence": {},
+      "difficulty_ratings": {
+        "CMDA 2005": 3, "CMDA 3654": 3, "CMDA 4654": 4
+      },
+      "concentrations": {
+        "CMDA-GEN": {"name": "General CMDA"},
+        "CMDA-DS": {"name": "Data Science"},
+        "CMDA-OR": {"name": "Operations Research"},
+        "CMDA-BIO": {"name": "Computational Biology"}
+      }
+    }
+  },
+  "minors": {}
+}
