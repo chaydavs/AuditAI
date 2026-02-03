@@ -497,7 +497,7 @@ def create_password_reset_token(user_id: int) -> str:
 
     # Invalidate any existing reset tokens for this user
     cursor.execute(
-        "UPDATE tokens SET used = 1 WHERE user_id = ? AND token_type = 'password_reset' AND used = 0",
+        sql("UPDATE tokens SET used = 1 WHERE user_id = ? AND token_type = 'password_reset' AND used = 0"),
         (user_id,)
     )
 
@@ -516,8 +516,8 @@ def verify_token(token: str, token_type: str) -> Optional[int]:
     cursor = get_cursor(conn)
 
     cursor.execute(
-        """SELECT user_id, expires_at FROM tokens
-           WHERE token = ? AND token_type = ? AND used = 0""",
+        sql("""SELECT user_id, expires_at FROM tokens
+           WHERE token = ? AND token_type = ? AND used = 0"""),
         (token, token_type)
     )
     row = cursor.fetchone()
@@ -905,11 +905,18 @@ async def signup(request: Request, data: UserSignup):
         )
         user_id = cursor.fetchone()["id"]
     else:
-        cursor.execute(
-            "INSERT INTO users (email, password_hash, name, major, minor, concentration, start_year, grad_year, email_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)",
-            (data.email, password_hash, data.name, data.major, data.minor, data.concentration, data.start_year, data.grad_year)
-        )
-        user_id = cursor.lastrowid
+        if USE_POSTGRES:
+            cursor.execute(
+                sql("INSERT INTO users (email, password_hash, name, major, minor, concentration, start_year, grad_year, email_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0) RETURNING id"),
+                (data.email, password_hash, data.name, data.major, data.minor, data.concentration, data.start_year, data.grad_year)
+            )
+            user_id = cursor.fetchone()["id"]
+        else:
+            cursor.execute(
+                "INSERT INTO users (email, password_hash, name, major, minor, concentration, start_year, grad_year, email_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)",
+                (data.email, password_hash, data.name, data.major, data.minor, data.concentration, data.start_year, data.grad_year)
+            )
+            user_id = cursor.lastrowid
     conn.commit()
     conn.close()
 
@@ -1403,7 +1410,7 @@ async def get_my_audits(user: dict = Depends(require_auth)):
     conn = get_db()
     cursor = get_cursor(conn)
     cursor.execute(
-        "SELECT id, major, completed, in_progress, roadmap, uploaded_at FROM audits WHERE user_id = ? ORDER BY uploaded_at DESC",
+        sql("SELECT id, major, completed, in_progress, roadmap, uploaded_at FROM audits WHERE user_id = ? ORDER BY uploaded_at DESC"),
         (user["user_id"],)
     )
     rows = cursor.fetchall()
@@ -1885,7 +1892,7 @@ async def get_graduation_progress(
     conn = get_db()
     cursor = get_cursor(conn)
     cursor.execute(
-        "SELECT plan_data FROM plans WHERE user_id = ? AND is_default = 1",
+        sql("SELECT plan_data FROM plans WHERE user_id = ? AND is_default = 1"),
         (user["user_id"],)
     )
     row = cursor.fetchone()
@@ -1911,7 +1918,7 @@ async def list_plans(user: dict = Depends(require_auth)):
     conn = get_db()
     cursor = get_cursor(conn)
     cursor.execute(
-        "SELECT id, name, plan_data, is_default, created_at, updated_at FROM plans WHERE user_id = ? ORDER BY updated_at DESC",
+        sql("SELECT id, name, plan_data, is_default, created_at, updated_at FROM plans WHERE user_id = ? ORDER BY updated_at DESC"),
         (user["user_id"],)
     )
     rows = cursor.fetchall()
@@ -1943,7 +1950,7 @@ async def create_plan(data: PlanCreate, user: dict = Depends(require_auth)):
 
     if USE_POSTGRES:
         cursor.execute(
-            "INSERT INTO plans (user_id, name, plan_data, is_default) VALUES (%s, %s, %s, %s) RETURNING id",
+            sql("INSERT INTO plans (user_id, name, plan_data, is_default) VALUES (?, ?, ?, ?) RETURNING id"),
             (user["user_id"], data.name, json.dumps(data.plan_data), 1 if data.is_default else 0)
         )
         plan_id = cursor.fetchone()["id"]
@@ -1974,7 +1981,7 @@ async def get_plan(plan_id: int, user: dict = Depends(require_auth)):
     conn = get_db()
     cursor = get_cursor(conn)
     cursor.execute(
-        "SELECT id, name, plan_data, is_default, created_at, updated_at FROM plans WHERE id = ? AND user_id = ?",
+        sql("SELECT id, name, plan_data, is_default, created_at, updated_at FROM plans WHERE id = ? AND user_id = ?"),
         (plan_id, user["user_id"])
     )
     row = cursor.fetchone()
@@ -2059,7 +2066,7 @@ async def get_default_plan(user: dict = Depends(require_auth)):
     conn = get_db()
     cursor = get_cursor(conn)
     cursor.execute(
-        "SELECT id, name, plan_data, is_default, created_at, updated_at FROM plans WHERE user_id = ? AND is_default = 1",
+        sql("SELECT id, name, plan_data, is_default, created_at, updated_at FROM plans WHERE user_id = ? AND is_default = 1"),
         (user["user_id"],)
     )
     row = cursor.fetchone()
